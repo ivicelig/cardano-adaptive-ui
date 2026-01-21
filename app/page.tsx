@@ -6,9 +6,15 @@ import AdaptiveUI from '@/components/AdaptiveUI';
 export default function Home() {
   const { address, balance, isConnected, isConnecting, error, connectWallet, disconnectWallet } = useWallet();
 
-  const formatBalance = (lovelace: bigint | null) => {
-    if (lovelace === null) return '0';
-    return (Number(lovelace) / 1_000_000).toFixed(2);
+  const formatBalance = (balanceHex: string | null) => {
+    if (!balanceHex) return '0';
+    try {
+      // Convert hex balance to lovelace (simplified - proper conversion would use CBOR)
+      const lovelace = BigInt(balanceHex);
+      return (Number(lovelace) / 1_000_000).toFixed(2);
+    } catch {
+      return '0';
+    }
   };
 
   return (

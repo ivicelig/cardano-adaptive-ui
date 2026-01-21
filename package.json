@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -11,6 +11,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
     "@lucid-evolution/lucid": "^0.4.29",
+    "cbor-web": "^10.0.11",
     "framer-motion": "^12.28.1",
     "lucid-cardano": "^0.10.11",
     "next": "16.1.4",
