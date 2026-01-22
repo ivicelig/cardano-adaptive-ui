@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// DApp Registry - Stores all indexed Cardano applications
+model DApp {
+  id                String   @id @default(cuid())
+  name              String
+  type              String   // dex, nft_marketplace, lending, staking
+  description       String
+  contractAddresses String   // JSON array stored as string in SQLite
+  logoUrl           String?
+  websiteUrl        String
+  apiEndpoint       String?
+  tvl               Float?
+  volume24h         Float?
+  lastIndexed       DateTime @default(now())
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  interfaces        DAppInterface[]
+  pools             Pool[]
+}
+
+// DApp Interface Schema - Defines how to interact with each dApp
+model DAppInterface {
+  id                String  @id @default(cuid())
+  dappId            String
+  actionType        String  // swap, buy_nft, stake, lend, unstake
+  inputSchema       String  // JSON stored as string - { fromToken: "string", toToken: "string", amount: "number" }
+  outputSchema      String  // JSON stored as string - { rate: "number", fee: "number", slippage: "number" }
+  contractInterface String  // JSON stored as string - ABI-like structure
+  exampleUsage      String?
+
+  dapp              DApp    @relation(fields: [dappId], references: [id], onDelete: Cascade)
+
+  @@index([dappId])
+  @@index([actionType])
+}
+
+// Action Chain - Tracks multi-action intents
+model ActionChain {
+  id            String    @id @default(cuid())
+  userId        String?
+  intentText    String
+  actions       String    // JSON array stored as string - Array of action specifications
+  status        String    @default("pending") // pending, in_progress, completed, failed
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status])
+  @@index([userId])
+}
+
+// Pool State - For DEXes (stores current liquidity pool state)
+model Pool {
+  id            String   @id @default(cuid())
+  dappId        String
+  poolAddress   String   @unique
+  token0        String
+  token1        String
+  reserve0      String   // bigint as string
+  reserve1      String   // bigint as string
+  fee           Float
+  liquidity     String   // bigint as string
+  lastUpdated   DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  dapp          DApp     @relation(fields: [dappId], references: [id], onDelete: Cascade)
+
+  @@index([dappId])
+  @@index([token0, token1])
+}

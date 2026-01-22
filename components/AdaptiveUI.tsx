@@ -5,15 +5,29 @@ import { ParsedIntent } from '@/types/intent';
 import SwapInterface from './SwapInterface';
 import StakeInterface from './StakeInterface';
 import ExternalPlatform from './ExternalPlatform';
+import { DynamicUI } from './DynamicUI';
+import { ActionChainUI, EnrichedAction } from './ActionChainUI';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AdaptiveUIProps {
   walletAddress: string | null;
 }
 
+interface ParsedResponse {
+  success: boolean;
+  isSingleAction: boolean;
+  chainId?: string;
+  executionMode?: 'sequential' | 'parallel' | 'mixed';
+  totalActions: number;
+  actions: EnrichedAction[];
+  originalIntent?: any;
+  intent?: ParsedIntent;
+}
+
 export default function AdaptiveUI({ walletAddress }: AdaptiveUIProps) {
   const [input, setInput] = useState('');
   const [intent, setIntent] = useState<ParsedIntent | null>(null);
+  const [parsedResponse, setParsedResponse] = useState<ParsedResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,6 +38,8 @@ export default function AdaptiveUI({ walletAddress }: AdaptiveUIProps) {
 
     setIsLoading(true);
     setError(null);
+    setIntent(null);
+    setParsedResponse(null);
 
     try {
       const response = await fetch('/api/parse-intent', {
@@ -32,13 +48,33 @@ export default function AdaptiveUI({ walletAddress }: AdaptiveUIProps) {
         body: JSON.stringify({ input }),
       });
 
+      console.log('[AdaptiveUI] Parse-intent response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to parse intent');
+        const errorData = await response.json();
+        console.error('[AdaptiveUI] Parse-intent error:', errorData);
+        throw new Error(errorData.details || 'Failed to parse intent');
       }
 
-      const data = await response.json();
-      setIntent(data.intent);
+      const data: ParsedResponse = await response.json();
+      console.log('[AdaptiveUI] Parsed response:', {
+        success: data.success,
+        isSingleAction: data.isSingleAction,
+        totalActions: data.totalActions,
+        actions: data.actions?.map(a => ({ type: a.type, dappName: a.dappName })),
+        originalIntent: data.originalIntent?.intent?.type
+      });
+
+      // Store the full response
+      setParsedResponse(data);
+
+      // For backward compatibility with hardcoded interfaces
+      if (data.originalIntent) {
+        console.log('[AdaptiveUI] Setting intent from originalIntent:', data.originalIntent.intent.type);
+        setIntent(data.originalIntent.intent);
+      }
     } catch (err) {
+      console.error('[AdaptiveUI] Error in handleSubmit:', err);
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setIsLoading(false);
@@ -48,7 +84,20 @@ export default function AdaptiveUI({ walletAddress }: AdaptiveUIProps) {
   const handleReset = () => {
     setInput('');
     setIntent(null);
+    setParsedResponse(null);
     setError(null);
+  };
+
+  const handleActionExecute = async (formData: any) => {
+    // Execute action via API
+    // This will be implemented when we build the transaction execution
+    console.log('Executing action with data:', formData);
+    return { success: true, message: 'Action executed' };
+  };
+
+  const handleChainComplete = () => {
+    console.log('Action chain completed!');
+    // Could trigger a notification, refresh data, etc.
   };
 
   return (
@@ -68,7 +117,7 @@ export default function AdaptiveUI({ walletAddress }: AdaptiveUIProps) {
               className="w-full px-6 py-4 text-lg rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors"
               disabled={isLoading}
             />
-            {intent && (
+            {(intent || parsedResponse) && (
               <button
                 type="button"
                 onClick={handleReset}
@@ -79,7 +128,7 @@ export default function AdaptiveUI({ walletAddress }: AdaptiveUIProps) {
             )}
           </div>
 
-          {!intent && (
+          {!intent && !parsedResponse && (
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
@@ -125,7 +174,46 @@ export default function AdaptiveUI({ walletAddress }: AdaptiveUIProps) {
 
       {/* Dynamic Interface Section */}
       <AnimatePresence mode="wait">
-        {intent && (
+        {/* NEW: Multi-Action Chain UI */}
+        {parsedResponse && !parsedResponse.isSingleAction && parsedResponse.actions.length > 1 && (
+          <motion.div
+            key="action-chain"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ActionChainUI
+              chainId={parsedResponse.chainId || 'temp'}
+              actions={parsedResponse.actions}
+              executionMode={parsedResponse.executionMode || 'sequential'}
+              onComplete={handleChainComplete}
+            />
+          </motion.div>
+        )}
+
+        {/* NEW: Single Action Dynamic UI */}
+        {parsedResponse && parsedResponse.isSingleAction && parsedResponse.actions.length === 1 && (
+          <motion.div
+            key="dynamic-single"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+          >
+            <DynamicUI
+              dappId={parsedResponse.actions[0].dappId}
+              dappName={parsedResponse.actions[0].dappName}
+              actionType={parsedResponse.actions[0].type}
+              uiSchema={parsedResponse.actions[0].uiSchema}
+              onExecute={handleActionExecute}
+              initialData={parsedResponse.actions[0].parameters}
+            />
+          </motion.div>
+        )}
+
+        {/* LEGACY: Hardcoded interfaces for backward compatibility */}
+        {intent && !parsedResponse && (
           <motion.div
             key={intent.type}
             initial={{ opacity: 0, scale: 0.95 }}

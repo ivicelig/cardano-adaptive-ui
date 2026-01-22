@@ -28,7 +28,25 @@ export interface ParsedIntent {
   };
 }
 
+export interface ParsedAction {
+  order: number;
+  type: IntentType;
+  confidence: number;
+  parameters?: Record<string, any>;
+  dependsOn?: number | null;
+  outputUsedBy?: number[] | null;
+}
+
+export interface MultiActionIntent {
+  actions: ParsedAction[];
+  executionMode: 'sequential' | 'parallel' | 'mixed';
+  totalActions: number;
+}
+
 export interface IntentParserResponse {
   intent: ParsedIntent;
   rawResponse: string;
+  // Multi-action support
+  actions?: ParsedAction[];
+  executionMode?: 'sequential' | 'parallel' | 'mixed';
 }

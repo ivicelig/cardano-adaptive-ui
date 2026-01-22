@@ -6,15 +6,25 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:seed:100": "tsx scripts/seed-100-dapps.ts",
+    "db:studio": "prisma studio",
+    "discovery:test": "tsx scripts/test-discovery.ts",
+    "ui:test": "tsx scripts/test-dynamic-ui.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
     "@lucid-evolution/lucid": "^0.4.29",
+    "@prisma/client": "^5.22.0",
     "cbor-web": "^10.0.11",
     "framer-motion": "^12.28.1",
     "lucid-cardano": "^0.10.11",
     "next": "16.1.4",
+    "prisma": "^5.22.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
@@ -26,6 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.4",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
